@@ -1,0 +1,13 @@
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+PyYAML>=6.0
+joblib>=1.4
+matplotlib>=3.8
+
+# boosting (optional - the code works without these installed)
+xgboost>=2.1
+lightgbm>=4.5
+
+# notebooks
+jupyterlab>=4.2

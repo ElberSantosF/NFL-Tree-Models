@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nfl-trees"
+version = "0.1.0"
+description = "A workbench for experimenting with tree models on NFL data."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "scikit-learn>=1.5",
+  "PyYAML>=6.0",
+  "joblib>=1.4",
+]
+
+[project.optional-dependencies]
+boosting = ["xgboost>=2.1", "lightgbm>=4.5"]
+dev = ["pytest>=8.2", "ruff>=0.5"]
+
+[project.scripts]
+nfl-trees = "nfl_trees.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["requires_data: needs the raw CSVs from the repository"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

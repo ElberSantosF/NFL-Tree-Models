@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Derived data and results (reproducible from the configs)
+data/processed/*
+results/*
+!data/**/.gitkeep
+!results/.gitkeep
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Raw data: versioned by default (~190 MB), so the repository is reproducible
+# on clone. Uncomment to keep GitHub light and distribute the CSVs through a
+# release or Git LFS (see data/raw/README.md).
+# data/raw/plays/
+# data/raw/plays_by_week/
+# data/raw/scores/
