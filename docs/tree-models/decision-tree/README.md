@@ -107,10 +107,10 @@ changes, so cross-validating over that path beats guessing at `max_depth`.
 ## On this dataset
 
 ~5,300 games, 10 features, a target near 50/50 with a real home-field tilt.
-Expect a shallow tree (depth 3–5) to be roughly as good as a deep one, and a
-deep one to be clearly worse on the test seasons. NFL outcomes carry a lot of
-irreducible noise; a model that fits the training seasons perfectly is fitting
-that noise.
+Expect leaf size to bind before depth does: with enough games per leaf a depth-8
+tree scores like a depth-5 one, and it is small leaves, not deep ones, that fall
+apart on the test seasons. NFL outcomes carry a lot of irreducible noise; a
+model that fits the training seasons perfectly is fitting that noise.
 
 Two useful things this model gives you that the ensembles will not:
 
@@ -128,13 +128,30 @@ can also route `NaN` down a learned default branch, so `missing_strategy: keep`
 is worth trying against the other two — see
 [config-reference](../../config-reference.md).
 
+**Measured, not guessed.** [Notebook 03](../../../notebooks/03_model_comparison.ipynb)
+tunes this model instead of asserting it: eighty TPE trials scored over twelve
+rolling-origin folds (2013–2024), with 2025 walled off from the search and from
+the feature selection. The tuned tree reaches **roc_auc 0.617** across the folds
+and **0.601** on the held-out 2025 season. Its accuracy there, 0.549, barely
+clears the 0.535 of always picking the home team — the ranking is worth more
+than the 0.5 cut makes it look, which is the reason to read both numbers.
+
+The same notebook settles which knob is doing the work. Both searches land
+between 77 and 98 games per leaf and then choose depths as far apart as 5 and 8
+for the same score: once a leaf has to speak for eighty games, the depth bound
+has nothing left to do. And out-of-fold permutation importance puts `month`,
+`week`, `day` and `playoff` at exactly zero in all twelve seasons — the tree
+never splits on them, dropping them costs 0.0003 of roc_auc, and the model runs
+on the six history rates alone, `away_pct_score_drive` alone worth more than the
+next two together.
+
 ## Registering it here
 
 ```python
 @register(
     "decision_tree",
     "Single decision tree (CART). Interpretable baseline.",
-    defaults={"max_depth": 4, "min_samples_leaf": 20},
+    defaults={"criterion": "log_loss", "max_depth": 8, "min_samples_leaf": 77},
 )
 def _decision_tree(task, params, seed):
     from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
