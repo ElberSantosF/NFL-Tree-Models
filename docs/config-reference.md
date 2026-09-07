@@ -23,9 +23,9 @@ data:
   sample_rows: null              # sample N rows (dev only; null = everything)
 
 features:
-  numeric: []                    # columns treated as numbers
-  categorical: [HomeTeam]        # columns treated as categories
-  builders: []                   # names in nfl_trees.features.FEATURE_BUILDERS
+  numeric: [pct_home_win, week]  # columns treated as numbers
+  categorical: [day]             # columns treated as categories
+  builders: [calendar]           # names in nfl_trees.features.FEATURE_BUILDERS
   missing_strategy: median       # median | mean | most_frequent | sentinel | keep
 
 split:
@@ -73,7 +73,24 @@ def _home_margin(df):
 `python -m nfl_trees models` lists what exists. See [models/](models/README.md).
 
 **`features.builders`** — names registered with `@builder` in `features.py`.
-Starts empty: features are the next step of the project.
+A builder only *produces* columns; the ones you want in the model still have to
+be listed under `features.numeric` / `features.categorical`.
+
+| Builder | Columns it adds | Reads |
+| --- | --- | --- |
+| `calendar` | `month`, `week`, `day`, `playoff` | the game's own row |
+| `win_rates` | `pct_home_win`, `pct_away_win` | the whole scores file |
+| `drive_rates` | `home_pct_score_drive`, `home_pct_allowed_drive` and the away pair | every plays file |
+
+All three are game grain, so they need `data.source: scores`. The full list with
+types and the window the rates are computed over is in the
+[README](../README.md#the-features).
+
+`win_rates` and `drive_rates` read their history from the **whole** data files
+rather than from the seasons the config asked for, so a game's feature value
+does not change when you narrow `data.seasons`. `drive_rates` folds every plays
+file, which costs a few seconds on the first run of a process and nothing
+afterwards.
 
 **`evaluation.metrics`**
 
@@ -104,7 +121,14 @@ The same holds for `data.source` and `split.strategy`.
 happened in the game itself. `HomeScore` and `AwayScore` are obvious, but the
 subtle case is an aggregated feature: "team's average points this season"
 computed over the whole season includes the very game you are predicting. The
-aggregation has to use **earlier games only**.
+aggregation has to use **earlier games only**. The four rate features already
+do — a new one should go through `features._prior_rate` rather than aggregate
+on its own.
+
+**Season 2010 has no history behind it.** The rate features look back on the
+previous season, and 2010 is the first one in the file: its week 1 comes out
+missing and its early weeks rest on two or three games. Start `data.seasons` at
+2011 unless you have a reason not to.
 
 **A test season in the past of the training set.** The validator rejects a
 season listed on both sides, but it does not reject training on 2024 and

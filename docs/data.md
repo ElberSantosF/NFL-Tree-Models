@@ -68,6 +68,42 @@ with it), 2010 through 2025. The 2026 file holds preseason only.
 `plays_by_week/<season>/` is the same data split per week: identical rows and
 columns, useful for opening one week by hand. Nothing in the code reads it.
 
+## Derived grain `drives` — one row per possession
+
+`plays` is not usable as-is for anything measured per possession: the two
+caveats below (`DriveNumber` restarting every quarter, and defensive
+touchdowns credited to the defense) both distort it. `data.load_drives` reads
+the plays files and folds them into the grain that survives both:
+
+| Column | Type | Note |
+| --- | --- | --- |
+| `Season` / `Week` | int / text | same labels as the other two sources |
+| `team` | text | the offense that **ran** the drive, as an abbreviation |
+| `opponent` | text | the defense that faced it |
+| `plays` | int | rows in the drive (penalties and timeouts included) |
+| `scored` | 0/1 | the drive ended in a touchdown or field goal **for `team`** |
+
+```python
+from nfl_trees.data import load_drives
+
+drives = load_drives([2024])          # one season
+drives = load_drives()                # 2010-2025, ~10 s and a few MB
+```
+
+98,907 drives over 2010–2025, 35.8% of them ending in points. One season is
+read at a time — the sixteen plays files together are ~580 MB in memory, while
+the drive table for all of them is a few megabytes.
+
+Two numbers do **not** match the raw file, on purpose. `scored` counts only
+`Touchdown` and `Field Goal`: an extra point is automatic and already implied
+by the touchdown, and a safety is two points for the *defense*. And the 1,169
+drives the source credits to a defense that returned a turnover are handed back
+to the offense that ran them, as drives that ended without points — which is
+what actually happened.
+
+`load_drives` covers 4,360 of the 4,363 games in `scores`; the three missing
+ones are the 2013 Wild Card games noted below.
+
 ## `Week` labels (both sources)
 
 | Group | Values |
@@ -82,15 +118,31 @@ dropped** (not a competitive game); preseason and postseason are controlled by
 `include_preseason` / `include_postseason` in the config. Preseason is out by
 default: rosters and intensity are not comparable to the regular season.
 
+`WEEK_ORDINAL` puts the same labels on a number line — preseason −5 to −1,
+regular season 1 to 18, postseason 19 to 22 — and `week_number` applies it to a
+column. That is the `week` feature, and it is what makes "later in the season"
+a thing a tree can split on.
+
+**The regular season is 17 weeks up to 2020 and 18 from 2021 on.** So "after
+week 17 is the playoffs" is a rule that was true and then quietly stopped being
+true: it files 80 real regular-season games (`WEEK 18`, 2021–2025) under
+playoffs. `is_postseason` uses the four labels instead, which holds in both
+eras — that is what the `playoff` feature is built on.
+
 ## Caveats
 
 **Team names in two formats.** `TeamWithPossession` carries the full name
 (`Detroit Lions`), while `HomeTeam`/`AwayTeam` carry the abbreviation (`DET`).
-They are not directly comparable — to join plays with games, an
-abbreviation ↔ name map is the first builder you will need. The plays files use
-each franchise's *current* name in every season, so the map needs no historical
-entries; the scores files do not, so `STL`/`SD`/`OAK`/`JAC`/`AZ` still appear
-and have to be folded into `LAR`/`LAC`/`LV`/`JAX`/`ARI`.
+They are not directly comparable, so joining plays with games needs a map both
+ways. Both live in `data.py`:
+
+- `TEAM_NAME_TO_ABBR` — full name to abbreviation. The plays files use each
+  franchise's *current* name in every season, so it needs no historical entries.
+- `canonical_team` — one abbreviation per franchise. `HomeTeam`/`AwayTeam` name
+  a relocated franchise by the abbreviation it used at the time, in **both**
+  sources, so `STL`/`SD`/`OAK`/`JAC`/`AZ` still appear and are folded into
+  `LAR`/`LAC`/`LV`/`JAX`/`ARI`. A team feature is about the franchise, not the
+  city.
 
 **A drive that ends in a defensive touchdown is labelled with the defense.**
 This is the sharpest trap in `plays`. On a pick-six or a fumble returned for a
@@ -110,6 +162,9 @@ find these drives is the play text: `PlayOutcome == "Touchdown"` together with
 `IsScoringDrive` follows the same convention, so it cannot be used to check a
 derived flag against — the two agree because they share the mistake.
 
+`load_drives` repairs this, so anything built on the drive grain is already
+past it. Anything that groups the raw plays by possession is not.
+
 **Three games are missing from `plays`.** Of the four 2013 Wild Card games,
 only KC at IND has plays. `scores` has all four, so joining the two sources on
 the game yields 4360 games where `scores` alone yields 4363.
@@ -118,11 +173,16 @@ the game yields 4360 games where `scores` alone yields 4363.
 of information into one string (down, yards to go, field position, clock,
 formation). Pulling that apart is `@builder` work in `features.py`.
 
-**`Quarter` and `Week` are text.** Declaring them as `numeric` produces a column
-of all `NaN` (`to_numeric` will not convert `"1st Quarter"`). Use
-`categorical`.
+**`Quarter` and `Week` are text.** Declaring either as `numeric` produces a
+column of all `NaN` (`to_numeric` will not convert `"1st Quarter"`). Use
+`categorical` — or, for `Week`, the `week` feature, which is `week_number`
+applied to the label and is numeric on purpose.
 
-**Dates without a year.** `Date` and `GameDate` carry only day and month.
+**Dates without a year.** `Date` and `GameDate` carry only day and month,
+which is enough for a calendar month (`September 14th` is month 9 in every
+season) and not enough to order two games inside the same week. The `month`
+feature takes the first; nothing takes the second, and the rate features use
+the week as their time step because of it.
 
 **2026 is partial.** The file exists but covers the start of the season, and
 most of its games are still `TBD`.

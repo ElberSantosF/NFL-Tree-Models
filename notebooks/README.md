@@ -17,12 +17,13 @@ The expected flow:
 | Notebook | What it is for |
 | --- | --- |
 | `01_data_exploration.ipynb` | Understand the CSVs: franchise win rates, home-field advantage, playoff history, scoring drives. |
-| `02_features.ipynb` | Try feature ideas before promoting them to a `@builder`. |
+| `02_features.ipynb` | The ten columns the models will be tested on: what each one means, the window the rates are computed over, and what each is worth on its own. |
 | `03_model_comparison.ipynb` | Read `leaderboard.csv` and compare the models. |
 | `04_model_interpretation.ipynb` | Open up the chosen model: importances, tree drawing, errors. |
 
-`01` has been worked through; `02` to `04` are still empty — they are your
-working pad, and they fill up as the study reaches them.
+`01` and `02` have been worked through; `03` and `04` are still empty — they are
+your working pad, and they fill up as the study reaches them. A new feature idea
+starts as a cell in `02` and moves into `features.py` only if it holds up.
 
 ## Useful snippets
 

@@ -5,15 +5,12 @@
 Predict the **winner of a game** from the 2010–2026 history, using tree
 models — and, along the way, document what each model does.
 
-Two things are deliberately left empty, to be filled in as the study moves
-forward:
+One thing is deliberately left empty, to be filled in as the study moves
+forward: **the model catalog**, because each model is added when it is studied
+(`models.py`).
 
-- **the model catalog starts empty** — each model is added when it is studied
-  (`models.py`);
-- **the feature list starts empty** — each feature is added when it is defined
-  (`features.py`).
-
-Everything around them is in place and tested.
+Everything around it is in place and tested, features included — three
+builders, ten columns, listed in the [README](../README.md#the-features).
 
 ## The core idea
 
@@ -100,9 +97,25 @@ def _recent_form(df: pd.DataFrame) -> pd.DataFrame:
 Then name it in `features.builders` and list the generated columns under
 `features.numeric` / `features.categorical`.
 
-The caveat worth repeating: team-level aggregation must use **only games that
-happened earlier** than the one being predicted. A full-season average
-includes the game itself and leaks the result.
+Three are registered. `calendar` is the easy kind: `month`, `week`, `day` and
+`playoff` all come off the game's own row. `win_rates` and `drive_rates` are
+the other kind, the one where the caveat bites — team-level aggregation must
+use **only games that happened earlier** than the one being predicted, because
+a full-season average includes the game itself and leaks the result.
+
+Both of them go through `_prior_rate`, which is where the window lives: the
+previous season in full plus the current one up to the week before. Two design
+points inside it are easy to undo by accident:
+
+- **the week is the time step**, so two games in the same week are simultaneous
+  and Thursday night never feeds into Sunday;
+- **the rates are indexed over a dense grid**, not over the rows that exist, so
+  a bye week — or a season that has not been played yet — still answers. That
+  is what lets the same builders feed `load_scores(statuses=("TBD",))`.
+
+A new history feature should reuse `_prior_rate` rather than aggregate on its
+own; that keeps every history feature in the project on one window, and one
+test guards all of them.
 
 ## Design decisions (and why)
 

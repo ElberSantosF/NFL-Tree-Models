@@ -18,13 +18,13 @@ overwritten.
 
 ## Current state
 
-The workbench is in place and tested. Two things are **empty on purpose**, to
-be filled in as the study moves forward:
+The workbench is in place and tested. One thing is still **empty on purpose**,
+to be filled in as the study moves forward:
 
 | | State | Where it goes |
 | --- | --- | --- |
 | Model catalog | empty | `@register` in [models.py](src/nfl_trees/models.py) |
-| Features | empty | `@builder` in [features.py](src/nfl_trees/features.py) |
+| Features | 3 builders, 10 columns | `@builder` in [features.py](src/nfl_trees/features.py) |
 | Target | `home_win` ready | `@target` in [data.py](src/nfl_trees/data.py) |
 | Data | 2010–2026 organized | [data/raw/](data/raw/README.md) |
 
@@ -73,7 +73,59 @@ Every run writes `results/<name>/` with `metrics.json`, `predictions.csv`,
 3. **Document it** by copying `docs/models/_template.md`.
 4. `python -m nfl_trees run decision_tree`
 
-Features come next, as `@builder` functions in `features.py`.
+The features are already there — the block to paste into the config is below.
+
+## The features
+
+Three builders, ten columns, all at game grain (`data.source: scores`):
+
+| Column | Type | What it is |
+| --- | --- | --- |
+| `pct_home_win` | numeric | the home team's win rate **at home** |
+| `pct_away_win` | numeric | the away team's win rate **on the road** |
+| `home_pct_score_drive` | numeric | share of the home team's drives that ended in points |
+| `home_pct_allowed_drive` | numeric | share of the drives it faced that ended in points |
+| `away_pct_score_drive` | numeric | the same two, measured on the away team |
+| `away_pct_allowed_drive` | numeric | " |
+| `month` | numeric | calendar month, 1–12 |
+| `week` | numeric | 1–18 through the regular season, 19–22 across the playoff rounds |
+| `day` | categorical | `sunday`, `monday`, `thursday`, … |
+| `playoff` | numeric | 1 in a postseason game, 0 otherwise |
+
+The first six are history, and history is where leakage lives. All six are
+computed over the same window: **the previous season in full, plus the current
+season up to the week before this game**. A tie counts half a win (the NFL
+convention), and a drive that ended in a defensive touchdown is handed back to
+the offense that actually ran it — see [docs/data.md](docs/data.md).
+
+Three things to know before running anything on them:
+
+- **Season 2010 is a warm-up.** It has no previous season, so its week 1 comes
+  out missing and its early weeks rest on very little. Train from 2011 on.
+- **`playoff` is the four postseason labels, not "after week 17".** That rule
+  was right until 2020 and stopped being right in 2021, when the regular season
+  grew to 18 weeks — it would file 80 regular-season games under playoffs.
+- **`week` is the ordinal, not the label.** A tree can split on "later than
+  week X"; the text label would be sorted alphabetically by the encoder, which
+  files week 10 next to week 1.
+
+The config block that uses all of them:
+
+```yaml
+features:
+  numeric:
+    - pct_home_win
+    - pct_away_win
+    - home_pct_score_drive
+    - home_pct_allowed_drive
+    - away_pct_score_drive
+    - away_pct_allowed_drive
+    - month
+    - week
+    - playoff
+  categorical: [day]
+  builders: [calendar, win_rates, drive_rates]
+```
 
 ## Layout
 
@@ -111,7 +163,8 @@ the file. The loader filters that out by default.
 
 **Leakage is the easy mistake here.** A team-strength feature must be computed
 from games **earlier** than the one being predicted. A full-season average
-includes the game itself.
+includes the game itself. The two history builders share one window for that,
+and `test_win_rate_never_sees_the_game_it_describes` is the test that says so.
 
 ## Tests
 

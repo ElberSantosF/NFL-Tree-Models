@@ -22,14 +22,25 @@ seed: 42
 data:
   source: scores
   target: home_win
+  # 2010 is left out on purpose: the rate features look back on the previous
+  # season, and 2010 does not have one.
   seasons: [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
   include_preseason: false
   include_postseason: true
 
 features:
-  numeric: []            # to fill in
-  categorical: []        # to fill in
-  builders: []           # to fill in
+  numeric:
+    - pct_home_win           # home team, at home
+    - pct_away_win           # away team, on the road
+    - home_pct_score_drive   # drives that ended in points
+    - home_pct_allowed_drive # ... and the ones it gave up
+    - away_pct_score_drive
+    - away_pct_allowed_drive
+    - month                  # 1-12
+    - week                   # 1-18 regular season, 19-22 playoffs
+    - playoff                # 1 in the postseason
+  categorical: [day]         # sunday, monday, thursday, ...
+  builders: [calendar, win_rates, drive_rates]
 
 split:
   strategy: season
