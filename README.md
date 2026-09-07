@@ -133,7 +133,7 @@ features:
 configs/          one YAML per experiment (this is where you work)
 data/raw/         the CSVs: scores/, plays/, plays_by_week/
 src/nfl_trees/    the package: config, data, features, split, models, metrics, runner
-docs/             architecture, data dictionary, one .md per model
+docs/             architecture, data dictionary, tree-model study notes, one .md per model
 notebooks/        exploration (experiments do not live here)
 results/          run output (outside Git)
 tests/            fast tests, they run without the CSVs
@@ -183,5 +183,6 @@ run without the real data.
 | [docs/config-reference.md](docs/config-reference.md) | every YAML field, valid values, common errors |
 | [docs/data.md](docs/data.md) | dictionary of both sources and their gotchas |
 | [docs/models/](docs/models/README.md) | how to add a model + the documentation template |
+| [docs/tree-models/](docs/tree-models/README.md) | what tree models are, one folder per model studied |
 | [data/raw/README.md](data/raw/README.md) | CSV layout |
 | [configs/README.md](configs/README.md) | how to write a config |

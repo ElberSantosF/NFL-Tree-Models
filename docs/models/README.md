@@ -4,6 +4,10 @@ One `.md` file per model, created when the model enters the catalog. They all
 follow the same structure ([`_template.md`](_template.md)) — that is what makes
 it possible to read two of them side by side and compare.
 
+These files are about **the runs**: which config, which hyperparameters, which
+metrics came out. How the algorithm itself works is written once, outside any
+experiment, in [`docs/tree-models/`](../tree-models/README.md).
+
 ## Catalog
 
 The catalog is **empty**. Models are added one at a time, as the study moves
