@@ -7,8 +7,6 @@ all models on purpose: that is what lets you read two files side by side and
 compare.
 -->
 
-# <Model name>
-
 > <one line: what this model does. The same sentence you passed to `@register`.>
 
 | | |
