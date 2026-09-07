@@ -18,12 +18,13 @@ The expected flow:
 | --- | --- |
 | `01_data_exploration.ipynb` | Understand the CSVs: franchise win rates, home-field advantage, playoff history, scoring drives. |
 | `02_features.ipynb` | The ten columns the models will be tested on: what each one means, the window the rates are computed over, and what each is worth on its own. |
-| `03_model_comparison.ipynb` | Read `leaderboard.csv` and compare the models. |
+| `03_model_comparison.ipynb` | One block of three cells per model: its name, the fit — Optuna over rolling-origin folds for the hyperparameters, out-of-fold permutation importance for the features — scored on the 2025 holdout, and the 2026 season it predicts: records, playoffs and champion. |
 | `04_model_interpretation.ipynb` | Open up the chosen model: importances, tree drawing, errors. |
 
-`01` and `02` have been worked through; `03` and `04` are still empty — they are
-your working pad, and they fill up as the study reaches them. A new feature idea
-starts as a cell in `02` and moves into `features.py` only if it holds up.
+`01` to `03` have been worked through; `04` is still empty — they are your
+working pad, and they fill up as the study reaches them. A new feature idea
+starts as a cell in `02` and moves into `features.py` only if it holds up; a
+model idea starts in `03` and moves into `models.py` plus a config.
 
 ## Useful snippets
 
