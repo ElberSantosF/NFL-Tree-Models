@@ -54,6 +54,25 @@ def test_primary_metric_must_be_computed(base_config_dict):
         ExperimentConfig.from_dict(base_config_dict)
 
 
+def test_invalid_source_is_rejected(base_config_dict):
+    base_config_dict["data"]["source"] = "jogadas"
+    with pytest.raises(ConfigError, match="invalid data.source"):
+        ExperimentConfig.from_dict(base_config_dict)
+
+
+def test_invalid_split_strategy_is_rejected(base_config_dict):
+    """Caught when the config loads, not halfway through the run."""
+    base_config_dict["split"]["strategy"] = "sazonal"
+    with pytest.raises(ConfigError, match="invalid split.strategy"):
+        ExperimentConfig.from_dict(base_config_dict)
+
+
+def test_invalid_missing_strategy_is_rejected(base_config_dict):
+    base_config_dict["features"]["missing_strategy"] = "medain"
+    with pytest.raises(ConfigError, match="invalid features.missing_strategy"):
+        ExperimentConfig.from_dict(base_config_dict)
+
+
 def test_season_in_both_train_and_test(base_config_dict):
     base_config_dict["split"]["test_seasons"] = [2023, 2024]
     with pytest.raises(ConfigError, match="both train and test"):

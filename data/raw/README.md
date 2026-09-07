@@ -23,6 +23,15 @@ are in [docs/data.md](../../docs/data.md).
 
 ## Size
 
-449 files, ~190 MB in total, versioned in Git by default so the repository is
-reproducible on clone. If you would rather keep GitHub light, uncomment the
-last block of `.gitignore` and distribute the data through a release or Git LFS.
+449 CSVs, ~370 MB in total, versioned in Git by default so the repository is
+reproducible on clone. Roughly half of that is redundant: `plays_by_week/` is
+the same rows as `plays/`, only split per week — dropping it would cost ~185 MB
+and no information. If you would rather keep GitHub light, uncomment the last
+block of `.gitignore` and distribute the data through a release or Git LFS.
+
+## Known gap
+
+The three 2013 Wild Card games other than KC at IND have no rows in `plays/`
+(and none in `plays_by_week/2013/`). `scores/` has all four. Anything joining
+the two sources on the game will come up three games short — see
+[docs/data.md](../../docs/data.md).

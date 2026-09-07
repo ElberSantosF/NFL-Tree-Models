@@ -26,14 +26,14 @@ features:
   numeric: []                    # columns treated as numbers
   categorical: [HomeTeam]        # columns treated as categories
   builders: []                   # names in nfl_trees.features.FEATURE_BUILDERS
-  missing_strategy: median       # median | sentinel | keep
+  missing_strategy: median       # median | mean | most_frequent | sentinel | keep
 
 split:
   strategy: season               # season (recommended) | random
   train_seasons: [2015, 2016]    # empty + season strategy = everything that is not test
   test_seasons: [2017]           # required with the season strategy
   test_size: 0.2                 # only used by the random strategy
-  cv_folds: 0                    # >0 runs cross-validation on train, as a reference
+  cv_folds: 0                    # >0 cross-validates the primary metric on train
 
 model:
   type: decision_tree            # required; must be registered in nfl_trees.models
@@ -91,8 +91,12 @@ whether the **probability** is calibrated. `accuracy` alone hides both.
 | Value | Effect |
 | --- | --- |
 | `median` | impute the training median (default) |
+| `mean` / `most_frequent` | the other `SimpleImputer` strategies |
 | `sentinel` | fill with `-999`, letting the model treat "missing" as its own value |
 | `keep` | keep `NaN` — only works with models that handle missing natively (`HistGradientBoosting`, XGBoost, LightGBM) |
+
+Any other value is rejected when the config loads, not halfway through the run.
+The same holds for `data.source` and `split.strategy`.
 
 ## Caveats that keep results honest
 
@@ -112,6 +116,18 @@ before reporting a metric.
 **`strategy: random` at play grain.** Plays from the same drive would land in
 train and test at once. At game grain the problem is smaller, but the random
 split still shuffles seasons — use `season`.
+
+**A model with no `predict_proba`.** `roc_auc`, `pr_auc`, `log_loss` and
+`brier` score a probability. When the estimator cannot give one they come back
+as `NaN` with a warning, rather than being computed on the hard 0/1 predictions
+— `roc_auc` over labels is arithmetically fine but it is balanced accuracy, not
+an AUC, and it would land on the leaderboard under the wrong name.
+`evaluation.threshold` is ignored in that case too.
+
+**`cv_folds` scores the primary metric.** `cv_mean` and `cv_std` are always on
+the scale of `primary_metric`, and `metrics.json` records which one under
+`cv.cv_metric`. A primary metric with no cross-validation scorer is an error,
+not a silent fallback to the estimator's default `.score()`.
 
 ## Common errors and what they mean
 

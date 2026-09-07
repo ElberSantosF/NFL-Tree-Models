@@ -2,13 +2,22 @@
 
 A metric is a function `(y_true, y_pred, y_proba) -> float`. Registering one
 here is all it takes to be able to name it in `evaluation.metrics` in the YAML.
+
+Some metrics score a *probability*, not a decision. They are listed in
+`NEEDS_PROBA` and come back as NaN when the estimator has no `predict_proba`:
+computing `roc_auc` on hard 0/1 predictions is arithmetically possible but it
+is no longer an AUC (it collapses to balanced accuracy), and a number under the
+wrong name on the leaderboard is worse than a missing one.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 import numpy as np
+
+log = logging.getLogger(__name__)
 
 MetricFn = Callable[[np.ndarray, np.ndarray, np.ndarray | None], float]
 
@@ -26,6 +35,9 @@ HIGHER_IS_BETTER = {
     "pr_auc",
     "r2",
 }
+
+# Metrics that score a probability: without `y_proba` they are not defined.
+NEEDS_PROBA = frozenset({"roc_auc", "pr_auc", "log_loss", "brier"})
 
 
 def _register(task: str, name: str) -> Callable[[MetricFn], MetricFn]:
@@ -59,6 +71,12 @@ def compute(
     for name in names:
         if name not in registry:
             raise KeyError(f"unknown metric '{name}' for {task}; use {sorted(registry)}")
+        if name in NEEDS_PROBA and y_proba is None:
+            log.warning(
+                "metric '%s' needs probabilities and the model gave none: reported as NaN", name
+            )
+            out[name] = float("nan")
+            continue
         try:
             out[name] = float(registry[name](y_true, y_pred, y_proba))
         except (ValueError, TypeError):
@@ -116,14 +134,18 @@ def _f1(y_true, y_pred, y_proba=None) -> float:
 def _roc_auc(y_true, y_pred, y_proba=None) -> float:
     from sklearn.metrics import roc_auc_score
 
-    return roc_auc_score(y_true, y_proba if y_proba is not None else y_pred)
+    if y_proba is None:
+        raise ValueError("roc_auc requires probabilities")
+    return roc_auc_score(y_true, y_proba)
 
 
 @_register("classification", "pr_auc")
 def _pr_auc(y_true, y_pred, y_proba=None) -> float:
     from sklearn.metrics import average_precision_score
 
-    return average_precision_score(y_true, y_proba if y_proba is not None else y_pred)
+    if y_proba is None:
+        raise ValueError("pr_auc requires probabilities")
+    return average_precision_score(y_true, y_proba)
 
 
 @_register("classification", "log_loss")

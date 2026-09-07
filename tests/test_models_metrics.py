@@ -84,6 +84,58 @@ def test_metric_that_does_not_apply_comes_back_as_nan():
     assert np.isnan(out["roc_auc"])
 
 
+@pytest.mark.parametrize("name", ["roc_auc", "pr_auc", "log_loss", "brier"])
+def test_probability_metrics_are_nan_without_probabilities(name):
+    """Never computed on hard labels: roc_auc over 0/1 is balanced accuracy."""
+    y_true = np.array([0, 0, 1, 1])
+    y_pred = np.array([0, 1, 0, 1])
+    out = metrics.compute("classification", [name], y_true, y_pred, None)
+    assert np.isnan(out[name])
+
+
+def test_a_model_without_predict_proba_does_not_report_an_auc(monkeypatch, scores,
+                                                              base_config_dict):
+    from sklearn.svm import LinearSVC
+
+    from nfl_trees import experiment
+    from nfl_trees.models import MODELS, register
+
+    @register("no_proba", "Estimator without predict_proba, for the tests.")
+    def _build(task, params, seed):
+        return LinearSVC(random_state=seed, **params)
+
+    try:
+        monkeypatch.setattr(experiment, "load_source", lambda *a, **k: scores)
+        base_config_dict["model"] = {"type": "no_proba", "params": {}}
+        result = experiment.run(ExperimentConfig.from_dict(base_config_dict), save=False)
+        assert np.isnan(result.metrics["roc_auc"])
+        assert not np.isnan(result.metrics["accuracy"])
+        assert "y_proba" not in result.predictions.columns
+    finally:
+        MODELS.pop("no_proba", None)
+
+
+def test_cross_validation_scores_the_primary_metric(monkeypatch, scores, base_config_dict):
+    """`cv_mean` reads on the scale of the metric it is named after."""
+    from nfl_trees import experiment
+
+    monkeypatch.setattr(experiment, "load_source", lambda *a, **k: scores)
+    base_config_dict["evaluation"] = {"metrics": ["accuracy"], "primary_metric": "accuracy"}
+    base_config_dict["split"]["cv_folds"] = 3
+    result = experiment.run(ExperimentConfig.from_dict(base_config_dict), save=False)
+
+    assert result.cv_scores["cv_metric"] == "accuracy"
+    assert 0.0 <= result.cv_scores["cv_mean"] <= 1.0
+
+
+def test_cross_validation_refuses_a_metric_it_cannot_score():
+    from nfl_trees.experiment import CV_SCORERS
+
+    assert set(CV_SCORERS) == set(metrics.CLASSIFICATION_METRICS) | set(
+        metrics.REGRESSION_METRICS
+    ), "every registered metric needs a cross-validation scorer"
+
+
 def test_unknown_metric():
     with pytest.raises(KeyError, match="unknown metric"):
         metrics.compute("classification", ["secret_auc"], np.array([0, 1]), np.array([0, 1]))

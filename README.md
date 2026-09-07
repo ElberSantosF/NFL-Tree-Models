@@ -35,6 +35,7 @@ python -m venv .venv
 .venv/Scripts/activate          # Windows;  source .venv/bin/activate on Linux/macOS
 pip install -e .                # the package and its core (numpy, pandas, scikit-learn)
 pip install -e ".[boosting]"    # optional: xgboost and lightgbm
+pip install -e ".[notebooks]"   # optional: matplotlib and jupyterlab (notebooks/)
 pip install -e ".[dev]"         # optional: pytest and ruff
 ```
 
@@ -105,8 +106,8 @@ model on information from the future relative to the test set.
 report results from.
 
 **Not every row of the scores file is a game.** `GameStatus` has `BYE`,
-`Clinched Playoffs` and `TBD` besides `FINAL` — 11% of the file. The loader
-filters that out by default.
+`Clinched Playoffs` and `TBD` besides `FINAL` — 885 of the 6185 rows, 14% of
+the file. The loader filters that out by default.
 
 **Leakage is the easy mistake here.** A team-strength feature must be computed
 from games **earlier** than the one being predicted. A full-season average

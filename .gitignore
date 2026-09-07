@@ -19,7 +19,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Raw data: versioned by default (~190 MB), so the repository is reproducible
+# Raw data: versioned by default (~370 MB), so the repository is reproducible
 # on clone. Uncomment to keep GitHub light and distribute the CSVs through a
 # release or Git LFS (see data/raw/README.md).
 # data/raw/plays/

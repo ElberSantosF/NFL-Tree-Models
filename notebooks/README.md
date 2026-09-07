@@ -16,12 +16,13 @@ The expected flow:
 
 | Notebook | What it is for |
 | --- | --- |
-| `01_data_exploration.ipynb` | Understand the CSVs: columns, cardinality, missing values, distributions. |
+| `01_data_exploration.ipynb` | Understand the CSVs: franchise win rates, home-field advantage, playoff history, scoring drives. |
 | `02_features.ipynb` | Try feature ideas before promoting them to a `@builder`. |
 | `03_model_comparison.ipynb` | Read `leaderboard.csv` and compare the models. |
 | `04_model_interpretation.ipynb` | Open up the chosen model: importances, tree drawing, errors. |
 
-The notebooks are empty on purpose — they are your working pad.
+`01` has been worked through; `02` to `04` are still empty — they are your
+working pad, and they fill up as the study reaches them.
 
 ## Useful snippets
 

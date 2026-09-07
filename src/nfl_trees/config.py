@@ -46,6 +46,9 @@ import yaml
 from .paths import CONFIG_DIR
 
 TASKS = ("classification", "regression")
+SOURCES = ("scores", "plays")
+SPLIT_STRATEGIES = ("season", "random")
+MISSING_STRATEGIES = ("median", "mean", "most_frequent", "sentinel", "keep")
 
 DEFAULT_METRICS = {
     "classification": ["roc_auc", "accuracy", "f1", "log_loss"],
@@ -73,7 +76,7 @@ class FeatureConfig:
     numeric: list[str] = field(default_factory=list)
     categorical: list[str] = field(default_factory=list)
     builders: list[str] = field(default_factory=list)
-    missing_strategy: str = "median"  # median | sentinel | keep
+    missing_strategy: str = "median"  # see MISSING_STRATEGIES
 
     @property
     def columns(self) -> list[str]:
@@ -166,6 +169,14 @@ class ExperimentConfig:
     def validate(self) -> None:
         if not self.model.type:
             raise ConfigError(f"'{self.name}': model.type is required")
+        _one_of(self.name, "data.source", self.data.source, SOURCES)
+        _one_of(self.name, "split.strategy", self.split.strategy, SPLIT_STRATEGIES)
+        _one_of(
+            self.name,
+            "features.missing_strategy",
+            self.features.missing_strategy,
+            MISSING_STRATEGIES,
+        )
         if not self.features.columns and not self.features.builders:
             raise ConfigError(
                 f"'{self.name}': no features declared "
@@ -190,6 +201,12 @@ class ExperimentConfig:
         data = asdict(self)
         data["source_path"] = str(self.source_path) if self.source_path else None
         return data
+
+
+def _one_of(name: str, field_name: str, value: str, valid: tuple[str, ...]) -> None:
+    """Reject a value the runner would only choke on halfway through the run."""
+    if value not in valid:
+        raise ConfigError(f"'{name}': invalid {field_name} '{value}'; use one of {list(valid)}")
 
 
 def _build(cls: type, raw: Any, section: str):

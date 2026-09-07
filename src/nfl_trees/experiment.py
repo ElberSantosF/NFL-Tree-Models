@@ -46,7 +46,7 @@ class RunResult:
     split_info: dict[str, Any]
     predictions: pd.DataFrame
     importances: pd.DataFrame | None
-    cv_scores: dict[str, float] = field(default_factory=dict)
+    cv_scores: dict[str, Any] = field(default_factory=dict)
     output_dir: Path | None = None
     duration_s: float = 0.0
 
@@ -103,8 +103,16 @@ def run(config: ExperimentConfig | str | Path, *, save: bool = True) -> RunResul
     y_test = y_arr[test_idx]
     y_pred = pipeline.predict(X_test)
     y_proba = _positive_proba(pipeline, X_test) if cfg.task == "classification" else None
-    if cfg.task == "classification" and y_proba is not None:
-        y_pred = (y_proba >= cfg.evaluation.threshold).astype(int)
+    if cfg.task == "classification":
+        if y_proba is not None:
+            y_pred = (y_proba >= cfg.evaluation.threshold).astype(int)
+        else:
+            log.warning(
+                "'%s' gives no probabilities: evaluation.threshold is ignored and %s "
+                "cannot be computed",
+                cfg.model.type,
+                sorted(set(cfg.evaluation.metrics) & metrics_mod.NEEDS_PROBA) or "no metric",
+            )
 
     scores = metrics_mod.compute(cfg.task, cfg.evaluation.metrics, y_test, y_pred, y_proba)
     cv_scores = (
@@ -152,17 +160,49 @@ def _positive_proba(pipeline: Pipeline, X: pd.DataFrame) -> np.ndarray | None:
     return proba[:, 1] if proba.ndim == 2 and proba.shape[1] == 2 else None
 
 
+# `evaluation.primary_metric` -> the scikit-learn scorer that computes it. The
+# `neg_` scorers come back negated, so the sign is flipped again on the way out
+# and `cv_mean` always reads on the same scale as the metric it is named after.
+CV_SCORERS = {
+    "accuracy": "accuracy",
+    "balanced_accuracy": "balanced_accuracy",
+    "precision": "precision",
+    "recall": "recall",
+    "f1": "f1",
+    "roc_auc": "roc_auc",
+    "pr_auc": "average_precision",
+    "log_loss": "neg_log_loss",
+    "brier": "neg_brier_score",
+    "rmse": "neg_root_mean_squared_error",
+    "mae": "neg_mean_absolute_error",
+    "medae": "neg_median_absolute_error",
+    "r2": "r2",
+}
+
+
 def _cross_validate(
     pipeline: Pipeline, X: pd.DataFrame, y: np.ndarray, cfg: ExperimentConfig
 ) -> dict[str, float]:
-    """Cross-validation on the training set, as a stability reference only."""
+    """Cross-validation on the training set, as a stability reference only.
+
+    Scores the same metric the config declares as primary. Without a scorer for
+    it the fold scores would silently be the estimator's default `.score()` --
+    a different metric under the same name -- so that case is refused.
+    """
     from sklearn.model_selection import cross_val_score
 
-    scoring = {"roc_auc": "roc_auc", "rmse": "neg_root_mean_squared_error"}.get(
-        cfg.evaluation.primary_metric, None
-    )
+    metric = cfg.evaluation.primary_metric
+    if metric not in CV_SCORERS:
+        raise KeyError(
+            f"no cross-validation scorer for primary_metric '{metric}'; "
+            f"available: {sorted(CV_SCORERS)}"
+        )
+    scoring = CV_SCORERS[metric]
     scores = cross_val_score(pipeline, X, y, cv=cfg.split.cv_folds, scoring=scoring, n_jobs=None)
+    if scoring.startswith("neg_"):
+        scores = -scores
     return {
+        "cv_metric": metric,
         "cv_folds": float(cfg.split.cv_folds),
         "cv_mean": float(np.mean(scores)),
         "cv_std": float(np.std(scores)),

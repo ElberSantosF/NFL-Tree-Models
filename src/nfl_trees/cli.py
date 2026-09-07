@@ -32,12 +32,15 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     refs = list(args.configs)
     if args.all:
+        if refs:
+            print("pass either a list of configs or --all, not both")
+            return 1
         refs = [str(CONFIG_DIR / f"{name}.yaml") for name in list_configs()]
-    if not refs:
-        if args.all:
+        if not refs:
             print(f"no configs in {CONFIG_DIR} -- create an experiment YAML first")
-        else:
-            print("nothing to run: pass a config or use --all")
+            return 1
+    if not refs:
+        print("nothing to run: pass a config or use --all")
         return 1
 
     failures = 0

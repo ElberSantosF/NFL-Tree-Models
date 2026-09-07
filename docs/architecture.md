@@ -112,7 +112,7 @@ exists in the config, but it is there to *show* that difference, not to draw
 conclusions from.
 
 **`load_scores` filters `GameStatus`.** The scores file contains rows that are
-not games (`BYE`, `Clinched Playoffs`) and games not played yet (`TBD`) — 11%
+not games (`BYE`, `Clinched Playoffs`) and games not played yet (`TBD`) — 14%
 of the total. Without that filter they would enter training as games with no
 score. See [data.md](data.md).
 
@@ -166,4 +166,6 @@ Things a "production" workbench would have that would be dead weight here:
 - **A prediction command** — predicting the upcoming round (`GameStatus == TBD`)
   comes after the first trained model. `load_scores(statuses=("TBD",))` already
   hands over those games.
-- **DVC / Git LFS** — the CSVs are small enough to live in Git.
+- **DVC / Git LFS** — the CSVs (~370 MB) still fit in Git comfortably. Worth
+  revisiting if the raw data grows: `plays_by_week/` alone is half of it, and
+  it is a slice of `plays/`, not new data.
