@@ -86,7 +86,7 @@ produce seven summaries of things not yet understood.
 | Model | Family | Library | Folder |
 | --- | --- | --- | --- |
 | [Decision tree](decision-tree/) | single tree | scikit-learn | written |
-| Random forest | bagging | scikit-learn | to come |
+| [Random forest](random-forest/) | bagging | scikit-learn | written |
 | Extra trees | bagging | scikit-learn | to come |
 | AdaBoost | boosting | scikit-learn | to come |
 | Gradient boosting | boosting | scikit-learn | to come |
