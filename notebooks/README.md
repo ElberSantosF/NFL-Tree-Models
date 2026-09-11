@@ -18,7 +18,7 @@ The expected flow:
 | --- | --- |
 | `01_data_exploration.ipynb` | Understand the CSVs: franchise win rates, home-field advantage, playoff history, scoring drives. |
 | `02_features.ipynb` | The ten columns the models will be tested on: what each one means, the window the rates are computed over, and what each is worth on its own. |
-| `03_model_comparison.ipynb` | One block of three cells per model: its name, the fit — Optuna over rolling-origin folds for the hyperparameters, out-of-fold permutation importance for the features — scored on the 2025 holdout, and the 2026 season it predicts: records, playoffs and champion. |
+| `03_model_comparison.ipynb` | One block of three cells per model: its name, the fit — Optuna over rolling-origin folds for the hyperparameters, out-of-fold permutation importance for the features — scored on the 2025 holdout, and the 2026 season it predicts: records, playoffs and champion. The first block also carries the harness the later ones reuse. |
 | `04_model_interpretation.ipynb` | Open up the chosen model: importances, tree drawing, errors. |
 
 `01` to `03` have been worked through; `04` is still empty — they are your
