@@ -141,54 +141,49 @@ Season 2010 is still the warm-up season with no history behind it: train from
 the forest is no better at telling an imputed median from a real one.
 
 **Measured, not guessed.** [Notebook 03](../../../notebooks/03_model_comparison.ipynb)
-fits this model under the protocol the tree got: rolling-origin folds over twelve
-seasons (2013–2024), 2025 walled off from both the search and the feature
-selection, 300 trees. Forty TPE trials rather than the tree's eighty — and the
-search says why forty was enough. The best trial and the tenth-best are **0.0025
-roc_auc** apart, against 0.0498 down to the worst: the surface is flat almost
-everywhere except at the edges, which is the practical shape of "bagging is the
-family least sensitive to its knobs".
+fits this model under the protocol the tree got, and it is the same three steps:
+twelve rolling-origin **cross-validation** folds (2013–2024) as the score,
+**Bayesian search** (Optuna TPE) over the hyperparameters, **permutation
+importance** to pick the columns, 2025 walled off from all three. 300 trees, and
+forty trials rather than the tree's eighty — a fit here costs seconds instead of
+milliseconds, and bagging is the family least sensitive to its knobs.
 
-The tuned forest reaches **roc_auc 0.655** across the folds and **0.616** on the
-held-out 2025 season, against **0.617** and **0.601** for the tuned tree. On the
-holdout that is +0.015 of roc_auc and +0.028 of accuracy — 0.577 against the
-tree's 0.549, over the 0.535 floor of always picking the home team — with the
-log loss down from 0.693 to 0.666 and the Brier score from 0.248 to 0.237. The
+The tuned forest reaches **roc_auc 0.655** across the folds and **0.618** on the
+held-out 2025 season, against **0.616** and **0.607** for the tuned tree. On the
+holdout that is +0.011 of roc_auc and +0.024 of accuracy — 0.577 against the
+tree's 0.553, over the 0.535 floor of always picking the home team — with the
+log loss down from 0.685 to 0.664 and the Brier score from 0.244 to 0.236. The
 probabilities got better, not only their ordering.
 
-Three things the run settled that the theory could only point at:
+Two things the run settled that the theory could only point at:
 
 - **It wants as much decorrelation as it can get.** The retuned forest ends at
-  `max_features=0.198` over six columns, which is one randomly chosen column
-  offered per split, and `max_samples=0.36` on top of that. With six features
-  that all say roughly the same thing in slightly different words, weakening
-  each tree costs little and `ρ` is where all the gain is — exactly what the
-  variance identity above predicts, and the opposite of what the `sqrt` default
-  would have done.
-- **It does split on the columns the tree ignored, and still loses nothing when
-  they go.** The step 1 forest spends **4%** of its impurity decrease on `month`,
-  `week`, `day` and `playoff` — it has to, since `max_features` keeps offering
-  them when nothing better is on the menu — where the tree never split on them
-  at all. But dropping them costs the forest 0.0002 of roc_auc, the same nothing
-  it cost the tree. The splits it spent there were noise, and averaging three
-  hundred trees is what makes noise cost nothing.
-- **Out of bag came out at 0.656, against 0.655 on the rolling folds.** The
-  pooling problem is real but small here: the free estimate landed 0.0015 above
-  the estimate that respects the calendar. Close enough to be useful as a sanity
-  check, and still the wrong estimator to report.
+  `max_features=0.108` over seven columns, which is one randomly chosen column
+  offered per split, and `max_samples=0.575` on top of that. With features that
+  all say roughly the same thing in slightly different words, weakening each
+  tree costs little and `ρ` is where all the gain is — exactly what the variance
+  identity above predicts, and the opposite of what the `sqrt` default would
+  have done.
+- **It reads the calendar differently than the tree does.** Permutation
+  importance leaves the tree's `month` and `week` at exactly zero, but puts them
+  *below* zero for the forest — −0.0006 and −0.0004, columns the averaging was
+  actively better off without. `day` goes the other way, surviving at 0.00003
+  where the tree had it at zero. `max_features` is why: offered one column at a
+  time, a forest has to split on whatever is on the menu, so a weak column gets
+  used where the tree would simply ignore it.
 
 One more thing worth seeing in the 2026 forecast, because it is the averaging
 made visible. The tree's Super Bowl came out at exactly 0.500 — both finalists
 had landed in the same leaf, and the notebook had to break the tie on expected
-wins. The forest, asked the same question, answers 53.4%: three hundred leaves
+wins. The forest, asked the same question, answers 53.1%: three hundred leaves
 averaged do not collide the way one leaf does. The two models also disagree on
 who wins it, which is what 2026 is there to settle.
 
 ## Registering it here
 
 The hyperparameters below are the ones the search landed on, and they assume the
-six history rates as the feature set — `max_features=0.198` means one column per
-split at six, and two at ten.
+six history rates plus `day` as the feature set — `max_features=0.108` means one
+column per split at seven, and still one at ten.
 
 ```python
 @register(
@@ -197,11 +192,11 @@ split at six, and two at ten.
     defaults={
         "n_estimators": 300,
         "criterion": "entropy",
-        "max_depth": 19,
-        "min_samples_leaf": 30,
-        "min_samples_split": 125,
-        "max_features": 0.198,
-        "max_samples": 0.361,
+        "max_depth": 20,
+        "min_samples_leaf": 32,
+        "min_samples_split": 16,
+        "max_features": 0.108,
+        "max_samples": 0.575,
         "n_jobs": -1,
     },
 )

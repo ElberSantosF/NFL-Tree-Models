@@ -129,21 +129,24 @@ is worth trying against the other two — see
 [config-reference](../../config-reference.md).
 
 **Measured, not guessed.** [Notebook 03](../../../notebooks/03_model_comparison.ipynb)
-tunes this model instead of asserting it: eighty TPE trials scored over twelve
-rolling-origin folds (2013–2024), with 2025 walled off from the search and from
-the feature selection. The tuned tree reaches **roc_auc 0.617** across the folds
-and **0.601** on the held-out 2025 season. Its accuracy there, 0.549, barely
-clears the 0.535 of always picking the home team — the ranking is worth more
-than the 0.5 cut makes it look, which is the reason to read both numbers.
+tunes this model instead of asserting it, on three things and nothing else:
+twelve rolling-origin **cross-validation** folds (2013–2024) as the score,
+eighty trials of **Bayesian search** (Optuna TPE) over the hyperparameters, and
+**permutation importance** to pick the columns. 2025 is walled off from all
+three. The tuned tree reaches **roc_auc 0.616** across the folds and **0.607**
+on the held-out 2025 season. Its accuracy there, 0.553, barely clears the 0.535
+of always picking the home team — the ranking is worth more than the 0.5 cut
+makes it look, which is the reason to read both numbers.
 
-The same notebook settles which knob is doing the work. Both searches land
-between 77 and 98 games per leaf and then choose depths as far apart as 5 and 8
-for the same score: once a leaf has to speak for eighty games, the depth bound
-has nothing left to do. And out-of-fold permutation importance puts `month`,
-`week`, `day` and `playoff` at exactly zero in all twelve seasons — the tree
-never splits on them, dropping them costs 0.0003 of roc_auc, and the model runs
-on the six history rates alone, `away_pct_score_drive` alone worth more than the
-next two together.
+The same notebook settles which knob is doing the work. Both searches choose
+depth 5 and land between 77 and 98 games per leaf: once a leaf has to speak for
+eighty games, the depth bound has nothing left to do. Out-of-fold permutation
+importance then puts `month`, `playoff` and `day` at exactly zero in all twelve
+seasons — the tree never splits on them — and retuning on the survivors is worth
+**+0.0014** of roc_auc. `away_pct_score_drive` alone is worth more than the next
+two together. `week` survives only in the arithmetic sense: 0.00013, positive in
+one season out of twelve, which is what a "keep everything above zero" rule
+admits at the bottom of the table.
 
 ## Registering it here
 
@@ -151,7 +154,12 @@ next two together.
 @register(
     "decision_tree",
     "Single decision tree (CART). Interpretable baseline.",
-    defaults={"criterion": "log_loss", "max_depth": 8, "min_samples_leaf": 77},
+    defaults={
+        "criterion": "log_loss",
+        "max_depth": 5,
+        "min_samples_leaf": 77,
+        "min_samples_split": 10,
+    },
 )
 def _decision_tree(task, params, seed):
     from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
